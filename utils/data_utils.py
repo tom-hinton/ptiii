@@ -1,36 +1,77 @@
-import os
-
-# FILES
-source_filename = os.getcwd() + '/data/b1378_sampled.txt'
-dest_filename = os.getcwd() + '/data/b1378_downsampled_shortened.txt'
-
-# FILTER VALUES
-t_start = 2462.0
-t_end = 7462.0
-downsampling_rate = 100
-
-
-# READ SOURCE FILE
-s = open(source_filename, 'r')
-lines = list()
-for i, line in enumerate(s):
-    # WRITE HEADERS
-    if i < 2:
-        lines.append(line)
-        continue
-
-    # FILTERING
-    columns = line.split()
-    if (
-        i % downsampling_rate == 0
-        and float(columns[6]) > t_start
-        and float(columns[6]) < t_end
-    ):
-        lines.append(line)
-s.close()
+import numpy as np
+from scipy.fft import fft
+from scipy.signal.windows import blackman
+from utils.dynsys_utils import \
+	calc_dtheta_EVT, \
+	embed, calc_lyap_spectrum, \
+	calc_dim_Cao1997, \
+	_calc_tangent_map
+import matplotlib.pyplot as plt
+from nolitsa.delay import dmi
+from scipy.signal import find_peaks
 
 
-# WRITE TO DEST
-d = open(dest_filename, 'w')
-d.writelines(lines)
-d.close()
+# CALCULATE FFT
+def calculate_fft(data):
+    print("Applying fft...")
+    w = blackman( len(data) )
+    y = data["SHEAR STRESS"].to_numpy()
+    yf = fft(y*w)
+    print("...applied.")
+    return yf
+
+
+# CALCULATE tau BY AMI
+max_tau = 10000
+min_ami_peak_width = 100
+def calculate_tau_ami(data):
+    print("Calculating best delay time with AMI (Fraser and Swinney, 1986)...")
+
+    AMI = dmi(data["NORMALISED SHEAR"], maxtau=max_tau)
+    minima, _ = find_peaks(-AMI, width=100)
+    first_minimum = minima[0]
+    print(first_minimum)
+    print("... calculated.")
+
+    # plt.plot(AMI)
+    # plt.scatter(minima, AMI[minima], color="red")
+    # plt.show()
+
+    return first_minimum
+
+
+# # CALCULATE BEST m, tau BY MINIMISING LYAPUNOV RADIUS
+tau_to_try = np.array([3,5,6,12])
+m_to_try = np.array([3,5,8,12])
+E1_threshold = 0.9
+E2_threshold = 0.9
+eps_over_L0 = 0.05
+
+def calculate_best_m_tau(data):
+    print("Calculating best m, tau by minimising the Lyapunov radius...")
+    mhat = np.empty(len(tau_to_try), dtype=np.int8)
+    eps_over_L = np.empty(len(tau_to_try))
+    for i, tau_i in enumerate(tau_to_try):
+        print("Looping through tau values: " + str(i+1) + "/" + str(len(tau_to_try)))
+        mhat_i, E1, E2 = calc_dim_Cao1997(X=data["NORMALISED SHEAR"], \
+					tau=tau_i, m=m_to_try, \
+					E1_thresh=E1_threshold, E2_thresh=E2_threshold, \
+					qw=None, flag_single_tau=True, parallel=False)
+        mhat[i] = mhat_i
+        H, tH = embed(data["NORMALISED SHEAR"], tau=[tau_i], \
+                        m=[int(mhat_i)], t=data["TIME"])
+        _, eps_over_L[i] = _calc_tangent_map(H, \
+                            n_neighbors=20, eps_over_L0=eps_over_L0)
+
+    best_mhat = mhat[np.nanargmin(eps_over_L)]
+    best_tau = tau_to_try[np.nanargmin(eps_over_L)]
+    return [best_mhat, best_tau]
+
+
+# CALCULATE LYAPUNOV
+eps_over_L0_ = eps_over_L0
+LEs_sampling = ['rand',None]
+def calculate_lyapunov_exponents(data, m, tau):
+    H, tH = embed(data["NORMALISED SHEAR"], tau=[tau], m=[m], t=data["TIME"])
+    LEs, LEs_mean, LEs_std, eps_over_L = calc_lyap_spectrum(H, sampling=LEs_sampling, eps_over_L0=eps_over_L0_, n_neighbors=20, verbose=False)
+    return LEs_mean[-1,:]

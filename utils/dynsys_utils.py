@@ -363,26 +363,19 @@ def calc_lyap_spectrum(X, dt=1, t_step=1, n_neighbors=20, eps_over_L0=0.05, \
 ############################
 def _calc_autocorr_time(X):
 	
-	_check_input_shape(X)
-	
-	np.random.rand(42)
-	Nt, Nx = X.shape
+	Nt = len(X)
 	
 	Nbatches  = int(np.ceil(Nt**(1/3)))
 	sizebatch = int(np.ceil(Nt**(2/3)))
 	ind_tbatch_start = np.ceil((Nt-sizebatch)*np.random.rand(Nbatches))
 	
-	autocorr_time = np.zeros((Nx,1))
-	for ii in np.arange(Nx):
-		x = X[:,ii]
-		var_x = np.var(x)
-		xbatches = np.zeros((Nbatches,sizebatch));
-		for bb in np.arange(Nbatches):
-			xbatches[bb,:] = \
-		        x[int(ind_tbatch_start[bb]):int(ind_tbatch_start[bb]+sizebatch)];
-		mu_xbatches = np.mean(xbatches,axis=1);
-		var_muxbatches = np.var(mu_xbatches);
-		autocorr_time[ii] = sizebatch*var_muxbatches/var_x;
+	var_x = np.var(X)
+	xbatches = np.zeros((Nbatches,sizebatch));
+	for bb in np.arange(Nbatches):
+		xbatches[bb,:] = X[int(ind_tbatch_start[bb]):int(ind_tbatch_start[bb]+sizebatch)];
+	mu_xbatches = np.mean(xbatches,axis=1);
+	var_muxbatches = np.var(mu_xbatches);
+	autocorr_time = sizebatch*var_muxbatches/var_x;
 	return autocorr_time
 
 #####################################
@@ -409,88 +402,39 @@ def calc_tau_delay(X,maxtau=None):
 ################################
 ### BEST EMBEDDING DIMENSION ###
 ################################
-def calc_dim_Cao1997(X, tau=np.arange(1,34,4), m=np.arange(1,21,1), \
+def calc_dim_Cao1997(X, tau=1, m=np.arange(1,21,1), \
 						E1_thresh=0.95, E2_thresh=0.95, mw=2, qw=3, \
 						window=10, flag_single_tau=False, parallel=True):
-		if isinstance(tau, int):
-			t = tau
-			tau = np.empty((1,),dtype=int)
-			tau[0] = int(t)
-			Ntau=1
-		else:
-			tau = np.array([int(tautau) for tautau in tau])
-			Ntau = tau.shape[0]
-		Nobs = X.shape[1]
-		if flag_single_tau==True:
-			# Check dimension
-			if Nobs!=Ntau:
-				raise ValueError("When flag_single_tau is True then X.shape[1] must be equal to len(tau).")
-		Nm   = m.shape[0]
-		if flag_single_tau==False:
-			E  = np.empty((Nobs,Ntau,Nm))
-			Es = np.empty((Nobs,Ntau,Nm))
-			E1 = np.empty((Nobs,Ntau,Nm-1))
-			E2 = np.empty((Nobs,Ntau,Nm-1))
-			mhat = np.zeros((Nobs,Ntau))
-		else:
-			E  = np.empty((Nobs,1,Nm))
-			Es = np.empty((Nobs,1,Nm))
-			E1 = np.empty((Nobs,1,Nm-1))
-			E2 = np.empty((Nobs,1,Nm-1))
-			mhat = np.zeros((Nobs,1))
-		if qw==None:
-			qw = _calc_autocorr_time(X)
-		tic = time.time()
-		print("")
-		print("Calculating best embedding dimension with Cao (1997) method")
-		for ii in range(Nobs):
-			if flag_single_tau==False:
-				tt=-1
-				for tautau in tau:
-					print("Scalar time series %d/%d, tau = %d: " %(ii+1,Nobs,tautau),end='')
-					tt+=1
-					try:
-						E[ii,tt,:],Es[ii,tt,:] = afn(X[:,ii], \
-									dim=m, tau=tautau, maxnum=None, \
-									window=int(qw[ii]), parallel=parallel)
-						E1[ii,tt,:] = E[ii,tt,1:]/E[ii,tt,:-1]
-						E2[ii,tt,:] = Es[ii,tt,1:]/Es[ii,tt,:-1]
-						if np.sum(E2[ii,tt,:]<E2_thresh)>0:
-							indE1 = np.argmax(E1[ii,tt,:]>=E1_thresh)
-							mhat[ii,tt] = int(m[indE1])
-							print("m = %d; Calculation time: %.2f s" \
-									%(mhat[ii,tt], time.time() - tic))
-						else:
-							print("E2 ~ const.: stochastic time series ", end='')
-							print("(m = nan); Calculation time: %.2f s" \
-										%(time.time() - tic))
-							mhat[ii,tt] = np.nan
-					except:
-						print("afn failed.")
-						mhat[ii,tt] = np.nan
-					
-			else:
-				tautau = tau[ii]
-				print("Scalar time series %d/%d, tau = %d: " %(ii+1,Nobs,tautau),end='')
-				tt = 0
-				try:
-					E[ii,tt,:],Es[ii,tt,:] = afn(X[:,ii], dim=m, tau=tautau, \
-								  maxnum=None, window=int(qw), parallel=parallel)
-					E1[ii,tt,:] = E[ii,tt,1:]/E[ii,tt,:-1]
-					E2[ii,tt,:] = Es[ii,tt,1:]/Es[ii,tt,:-1]
-					if np.sum(E2[ii,tt,:]<E2_thresh)>0:
-						indE1 = np.argmax(E1[ii,tt,:]>=E1_thresh)
-						mhat[ii,tt] = int(m[indE1])
-						print("m = %d; Calculation time: %.2f s" %(mhat[ii,tt], time.time() - tic))
-					else:
-						print("E2 ~ const.: stochastic time series (m = nan); Calculation time: %.2f s" %(time.time() - tic))
-						mhat[ii,tt] = np.nan
-				except:
-					print("afn failed.")
-					mhat[ii,tt] = np.nan
-				
-				
-		return mhat, E1, E2
+
+	if qw==None:
+		qw = _calc_autocorr_time(X)
+
+	tic = time.time()
+
+	E, Es = afn(X, dim=m, tau=tau, maxnum=None, window=int(qw), parallel=parallel)
+
+	E1 = E[1:]/E[:-1]
+	E2 = Es[1:]/Es[:-1]
+
+	# print("Printing E, Es, E1, E2")
+	# print(E)
+	# print(Es)
+	# print(E1)
+	# print(E2)
+
+	indE1 = np.argmax(E1>=E1_thresh)
+	mhat = int(m[indE1])
+
+	return mhat, E1, E2
+
+	# if np.sum(E2[ii,tt,:]<E2_thresh)>0:
+	# 	indE1 = np.argmax(E1[ii,tt,:]>=E1_thresh)
+	# 	mhat[ii,tt] = int(m[indE1])
+	# 	print("m = %d; Calculation time: %.2f s" %(mhat[ii,tt], time.time() - tic))
+	# else:
+	# 	print("E2 ~ const.: stochastic time series (m = nan); Calculation time: %.2f s" %(time.time() - tic))
+	# 	mhat = np.nan
+
 	
 ############################
 ### EXTREME VALUE THEORY ###
