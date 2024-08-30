@@ -415,25 +415,16 @@ def calc_dim_Cao1997(X, tau=1, m=np.arange(1,21,1), \
 
 	E1 = E[1:]/E[:-1]
 	E2 = Es[1:]/Es[:-1]
-
-	# print("Printing E, Es, E1, E2")
-	# print(E)
-	# print(Es)
-	# print(E1)
-	# print(E2)
-
-	indE1 = np.argmax(E1>=E1_thresh)
-	mhat = int(m[indE1])
+	
+	if np.sum(E2<E2_thresh)>0:
+		indE1 = np.argmax(E1>=E1_thresh)
+		mhat = int(m[indE1])
+		print("m = %d; Calculation time: %.2f s" %(mhat, time.time() - tic))
+	else:
+		print("E2 ~ const.: stochastic time series (m = nan); Calculation time: %.2f s" %(time.time() - tic))
+		mhat = np.nan
 
 	return mhat, E1, E2
-
-	# if np.sum(E2[ii,tt,:]<E2_thresh)>0:
-	# 	indE1 = np.argmax(E1[ii,tt,:]>=E1_thresh)
-	# 	mhat[ii,tt] = int(m[indE1])
-	# 	print("m = %d; Calculation time: %.2f s" %(mhat[ii,tt], time.time() - tic))
-	# else:
-	# 	print("E2 ~ const.: stochastic time series (m = nan); Calculation time: %.2f s" %(time.time() - tic))
-	# 	mhat = np.nan
 
 	
 ############################

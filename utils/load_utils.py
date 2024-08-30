@@ -27,10 +27,10 @@ def import_brava_data(filename, picklename, params={}):
 
 
     # FILTER DATA
-    if params["t_start"] and params["t_end"]:
+    if "t_start" in params and "t_end" in params:
         data = data[ data["TIME"].between(params["t_start"], params["t_end"]) ]
     data = data.reset_index(drop=True)
-    data["TIME"] = data["TIME"]-data["TIME"][0]
+    # data["TIME"] = data["TIME"]-data["TIME"][0]
 
     # RESAMPLE DATA
     if "resample_rate" in params:
