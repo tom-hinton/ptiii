@@ -39,19 +39,19 @@ plt.show()
 
 
 # CALCULATE BEST tau BY AMI
-tau_ami = calculate_tau_ami(data)
-print("printing tau_ami")
-print(tau_ami)
+# tau_ami = calculate_tau_ami(data)
+# print("printing tau_ami")
+# print(tau_ami)
 
 
 # CALCULATE BEST m, tau BY MIN LYAPUNOV RADIUS
-m, tau = calculate_best_m_tau(data)
-print("Printing m, tau")
-print(m)
-print(tau)
+# m, tau = calculate_best_m_tau(data)
+# print("Printing m, tau")
+# print(m)
+# print(tau)
 
 
 # CALCULATE LYAPUNOV EXPONENTS
-LEs = calculate_lyapunov_exponents(data, m, tau)
-print("LEs:")
-print(LEs)
+# LEs = calculate_lyapunov_exponents(data, m, tau)
+# print("LEs:")
+# print(LEs)

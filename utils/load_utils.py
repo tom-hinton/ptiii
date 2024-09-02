@@ -22,20 +22,20 @@ def import_brava_data(filename, picklename, params={}):
     data.rename(columns={
         "V-LOAD": "SHEAR STRESS",
         "H-LOAD": "NORMAL STRESS",
-        "Time": "TIME"
+        "Time": "TIME",
+        " LVDT": "ON BOARD LVDT"
     }, inplace=True)
 
-
-    # FILTER DATA
+    # CLIP DATA
     if "t_start" in params and "t_end" in params:
         data = data[ data["TIME"].between(params["t_start"], params["t_end"]) ]
     data = data.reset_index(drop=True)
     # data["TIME"] = data["TIME"]-data["TIME"][0]
 
     # RESAMPLE DATA
-    if "resample_rate" in params:
+    if "downsample_factor" in params:
         large_data = data
-        num_rows = data.shape[0] // params["resample_rate"]
+        num_rows = data.shape[0] // params["downsample_factor"]
         data = pd.DataFrame(columns=data.columns)
         for column_name, column in large_data.items():
             if column_name == "TIME":
@@ -49,6 +49,12 @@ def import_brava_data(filename, picklename, params={}):
     X = data["SHEAR STRESS"] - (p[0]*data["TIME"] + p[1])
     data["NORMALISED SHEAR"]  = (X - np.min(X)) / (np.max(X) - np.min(X))
 
+    # UNIT CONVERSION
+    data["SHEAR STRESS"] = (data["SHEAR STRESS"]+0.044) / 5
+    data["NORMAL STRESS"] *= 0.2
+    data["ON BOARD LVDT"] *= 1546
+    data["V-LVDT"] *= -1
+
     # SAVE TO PICKLE
     with open(picklename, 'wb') as f:
         pickle.dump(data, f)
@@ -56,4 +62,9 @@ def import_brava_data(filename, picklename, params={}):
     # RETURN DATA
     return data
 
-    
+def get_import_params(exp_name):
+    match exp_name:
+        case "b1383":
+            return { "t_start": 1940, "t_end": 5922 }
+        case _:
+            return {}
