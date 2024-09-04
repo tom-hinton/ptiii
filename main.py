@@ -24,12 +24,14 @@ params = {
 }
 
 # IMPORT DATA
-data = import_brava_data(filename, picklename, params)
+data, _ = import_brava_data(filename, picklename, params)
 print("...data imported.")
-print("Data head:")
-print(data.head())
+print(_.head())
+plt.plot(_["TIME"], _["SHEAR STRESS"])
 plt.plot(data["TIME"], data["SHEAR STRESS"])
 plt.show()
+print("Data head:")
+print(data.head())
 
 
 # CALCULATE FFT
