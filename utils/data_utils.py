@@ -9,6 +9,7 @@ from utils.dynsys_utils import \
 import matplotlib.pyplot as plt
 from nolitsa.delay import dmi
 from scipy.signal import find_peaks
+import utils.plot_utils as plot
 
 
 # CALCULATE FFT
@@ -41,7 +42,7 @@ def calculate_tau_ami(data):
 
 
 # CALCULATE BEST m, tau BY MINIMISING LYAPUNOV RADIUS
-def calculate_best_m_tau(data, params, plot=False, save=False):
+def calculate_best_m_tau(data, params, fig=False, save=False):
     print("Calculating best m, tau by minimising the Lyapunov radius:")
     tau_to_try = params["tau_to_try"]
     m_to_try = params["m_to_try"]
@@ -49,30 +50,17 @@ def calculate_best_m_tau(data, params, plot=False, save=False):
     m = np.empty(len(tau_to_try))
     eps_over_L = np.empty(len(tau_to_try))
     eps_over_L[:] = np.nan
-
-    if plot==True:
-        fig,axs=plt.subplots(2, 2)
-        fig.set_size_inches((11,9))
-
-        axs[0,0].plot(data["TIME"], data["NORMALISED SHEAR"])
-        axs[0,0].set_title("Time Series")
-        axs[0,0].set_xlabel("Time")
-        axs[0,0].set_ylabel("Shear Stress")
+    E1s = np.empty((len(tau_to_try), len(m_to_try)-1))
+    E2s = np.empty((len(tau_to_try), len(m_to_try)-1))
 
     for i, tau_i in enumerate(tau_to_try):
         print("Loop ", str(i+1), "/", str(len(tau_to_try)), ": tau = ", str(tau_i), sep="")
 
-        m_i, E1, E2 = calc_dim_Cao1997(X=data["NORMALISED SHEAR"], \
+        m_i, E1s[i], E2s[i] = calc_dim_Cao1997(X=data["NORMALISED SHEAR"], \
 					tau=tau_i, m=m_to_try, \
 					E1_thresh=params["E1_threshold"], E2_thresh=params["E2_threshold"], \
 					qw=None, flag_single_tau=True, parallel=False)
         m[i] = m_i
-
-        if plot==True:
-            label = "Tau = " + str(tau_i)
-            color = "C" + str(i)
-            axs[0,1].plot(E1, color=color, label=label)
-            axs[0,1].plot(E2, color=color)
 
         if ~np.isnan(m_i):
             H, tH = embed(data["NORMALISED SHEAR"], tau=[tau_i], \
@@ -87,30 +75,8 @@ def calculate_best_m_tau(data, params, plot=False, save=False):
         best_m = int(m[np.nanargmin(eps_over_L)])
         best_tau = tau_to_try[np.nanargmin(eps_over_L)]
 
-    if plot==True:
-        axs[0,1].set_title("E1 & E2")
-        axs[0,1].set_xlabel("Embedding dimension m")
-        axs[0,1].set_ylabel("E value")
-        axs[0,1].axhline(y=params["E1_threshold"], color="lightgrey", label="E1 threshold")
-        axs[0,1].legend()
-
-        axs[1,0].scatter(tau_to_try, eps_over_L)
-        axs[1,0].set_title("Eps over L")
-        axs[1,0].set_xlabel("Tau delay")
-        axs[1,0].set_ylabel("Eps over L")
-
-        if ~np.isnan(eps_over_L).all():
-            axs[1,1].remove()
-            axs[1,1] = fig.add_subplot(2,2,4,projection="3d")
-            H, tH = embed(data["NORMALISED SHEAR"], tau=[best_tau], m=[best_m], t=data["TIME"])
-            axs[1,1].plot(H[:,0], H[:,1], H[:,2])
-            axs[1,1].set_title("First embedding")
-
-        fig.suptitle("Window: m=" + str(best_m) + ", tau=" + str(best_tau))
-        if save:
-            filename = "/snapshot_window_" + str(params["current_loop"]) + ".png" if "current_loop" in params else "/summary_calc_m_tau.png"
-            fig.savefig(params["results_dir"] + filename)
-
+    if fig==True:
+        plot.summary_calc_m_tau(data, params, E1s, E2s, eps_over_L, best_m, best_tau, save=True)
 
     return [best_m, best_tau]
 

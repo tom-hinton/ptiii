@@ -51,6 +51,7 @@ def import_brava_data(params):
             else:
                 print("Resampling column: " + column_name)
                 data[column_name] = resample(column, num_rows)
+        data = data.iloc[1:]
 
     # ADD NORMALISED V LOAD COLUMN
     p = np.polyfit(data["TIME"], data["SHEAR STRESS"], deg=1)
