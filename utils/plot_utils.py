@@ -76,7 +76,7 @@ def summary_calc_m_tau(data, params, E1s, E2s, eps_over_L, best_m, best_tau, sav
     axs[1,0].set_xlabel("Tau delay")
     axs[1,0].set_ylabel("Eps over L")
 
-    if ~np.isnan(eps_over_L).all():
+    if ~np.isnan(eps_over_L).all() and best_m >= 3:
         axs[1,1].remove()
         axs[1,1] = fig.add_subplot(2,2,4,projection="3d")
         H, tH = embed(data["NORMALISED SHEAR"], tau=[best_tau], m=[best_m], t=data["TIME"])

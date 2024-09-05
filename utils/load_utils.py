@@ -75,6 +75,10 @@ def get_exp_meta(params):
                 "t_start": 1940, "t_end": 5922,
                 "ROIs": [ (3790.5, 4614.3), (4614.3, 4853.6), (4853.6, 5677.6), (5677.6, 5922) ]
             }
+        case "b1385":
+            return { "t_start": 2320, "t_end": 12232 }
+        case "b1378":
+            return { "t_start": 2466, "t_end": 19570 }
         case _:
             return {}
         
