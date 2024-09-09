@@ -131,7 +131,7 @@ def embed(X, tau=[1], m=[2], t=None):
 ### LYAPUNOV SPECTRUM ###
 #########################
 def _calc_tangent_map(X, t_step=1, n_neighbors=20, \
-					  eps_over_L0=0.05, eps_over_L_fact=1.2, verbose=False):
+					  eps_over_L0=0.05, eps_over_L_fact=1.2, verbose=False, **args):
 	"""
 	Parameters
 	----------
@@ -230,7 +230,7 @@ def _calc_tangent_map(X, t_step=1, n_neighbors=20, \
 def calc_lyap_spectrum(X, dt=1, t_step=1, n_neighbors=20, eps_over_L0=0.05, \
 					   eps_over_L_fact=1.2, sampling=['rand',None], n=1000, \
 					   NLEs_statistic=100, method="SS85", verbose=True, \
-					   flag_calc_tangent_map=True, A=None):
+					   flag_calc_tangent_map=True, A=None, **args):
 		# sampling: to decide which points to use for the Lyapunov spectrum
 		#           estimation. Options:
 		#           ['all', None]: Use all the possible trajectories.

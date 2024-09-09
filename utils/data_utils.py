@@ -7,9 +7,11 @@ from utils.dynsys_utils import \
 	calc_dim_Cao1997, \
 	_calc_tangent_map
 import matplotlib.pyplot as plt
+from nolitsa.dimension import afn
 from nolitsa.delay import dmi
 from scipy.signal import find_peaks
 import utils.plot_utils as plot
+import time
 
 
 # CALCULATE FFT
@@ -41,50 +43,45 @@ def calculate_tau_ami(data):
     return first_minimum
 
 
-# CALCULATE BEST m, tau BY MINIMISING LYAPUNOV RADIUS
-def calculate_best_m_tau(data, params, fig=False, save=False):
-    print("Calculating best m, tau by minimising the Lyapunov radius:")
-    tau_to_try = params["tau_to_try"]
-    m_to_try = params["m_to_try"]
+# CALCULATE BEST m, 
+def calculate_best_m_tau(data, **opts):
+    print("Calculating best m, tau...")
+    tau_to_try = opts["tau_to_try"]
+    m_to_try = opts["m_to_try"]
 
     m = np.empty(len(tau_to_try))
-    eps_over_L = np.empty(len(tau_to_try))
-    eps_over_L[:] = np.nan
+    eps_over_L = np.empty(len(tau_to_try)) * np.nan
     E1s = np.empty((len(tau_to_try), len(m_to_try)-1))
     E2s = np.empty((len(tau_to_try), len(m_to_try)-1))
 
     for i, tau_i in enumerate(tau_to_try):
-        print("Loop ", str(i+1), "/", str(len(tau_to_try)), ": tau = ", str(tau_i), sep="")
+        print("Loop ", (i+1), "/", len(tau_to_try), ": tau = ", tau_i, sep="")
+        tic = time.time()
 
-        m_i, E1s[i], E2s[i] = calc_dim_Cao1997(X=data["NORMALISED SHEAR"], \
-					tau=tau_i, m=m_to_try, \
-					E1_thresh=params["E1_threshold"], E2_thresh=params["E2_threshold"], \
-					qw=None, flag_single_tau=True, parallel=False)
-        m[i] = m_i
+        m[i], E1s[i], E2s[i] = calc_dim_Cao1997(X=data["NORMALISED SHEAR"], tau=tau_i, m=m_to_try, qw=None, flag_single_tau=True, parallel=False, **opts)
 
-        if ~np.isnan(m_i):
-            H, tH = embed(data["NORMALISED SHEAR"], tau=[tau_i], \
-                            m=[int(m_i)], t=data["TIME"])
-            _, eps_over_L[i] = _calc_tangent_map(H, \
-                                n_neighbors=params["n_neighbors"], eps_over_L0=params["eps_over_L0"])
+        if ~np.isnan(m[i]):
+            H, _ = embed(data["NORMALISED SHEAR"], tau=[tau_i], m=[int(m[i])], t=data["TIME"])
+            _, eps_over_L[i] = _calc_tangent_map(H, **opts)
+            print("Result: m=", m[i], ", eps/L=", round(eps_over_L[i], 3), ". Calculation time=", round(time.time()-tic, 1), "s", sep="")
+        else:
+            print("Result: E2 ~ const., time series is stochastic. Calculation time = ", tic-time.time(), "s")
     
     if np.isnan(eps_over_L).all():
-        best_m = np.nan
-        best_tau = np.nan
-    else:
-        best_m = int(m[np.nanargmin(eps_over_L)])
-        best_tau = tau_to_try[np.nanargmin(eps_over_L)]
+        return [np.nan, np.nan]
+    
+    best_m = int(m[np.nanargmin(eps_over_L)])
+    best_tau = int(tau_to_try[np.nanargmin(eps_over_L)])
 
-    if fig==True:
-        plot.summary_calc_m_tau(data, params, E1s, E2s, eps_over_L, best_m, best_tau, save=True)
-
-    return [best_m, best_tau]
+    print("...best m = ", best_m, ", tau = ", best_tau, sep="")
+    return [best_m, best_tau, eps_over_L, E1s, E2s]
 
 
 # CALCULATE LYAPUNOV
-def calculate_lyapunov_exponents(data, params, m, tau):
-    H, tH = embed(data["NORMALISED SHEAR"], tau=[tau], m=[m], t=data["TIME"])
-    LEs_, LEs_mean, LEs_std, eps_over_L = calc_lyap_spectrum(H, sampling=params["LEs_sampling"], eps_over_L0=params["eps_over_L0"], n_neighbors=params["n_neighbors"], verbose=False)
+def calculate_lyapunov_exponents(data, m, tau, **args):
+    print("Calculating Lyapunov exponents and Kaplan-Yorke dimension...")
+    H, _ = embed(data["NORMALISED SHEAR"], tau=[tau], m=[m], t=data["TIME"])
+    LEs_, LEs_mean, LEs_std, eps_over_L = calc_lyap_spectrum(H, verbose=False, **args)
     LEs = LEs_mean[-1,:]
 
     if np.sum(LEs) > 0:
@@ -93,5 +90,49 @@ def calculate_lyapunov_exponents(data, params, m, tau):
     i = 1
     while i <= len(LEs) and np.sum(LEs[:i]) > 0:
         i += 1
-    
-    return [LEs, i]
+    if np.sum(LEs[:-1]) < 0:
+        kyd = i + np.sum(LEs[:i])/LEs[i]
+    else:
+        kyd = np.nan
+
+    print("... KYD=", round(kyd,2), ", LEs: ", LEs, sep="")
+    return [LEs, kyd]
+
+# CALCULATE EMBEDDING DIMENSION BY CAO 1997
+def calc_dim_Cao1997(X, tau=1, m=np.arange(1,21,1), \
+						E1_thresh=0.95, E2_thresh=0.95, mw=2, qw=None, \
+						window=10, flag_single_tau=False, parallel=True, **args):
+
+	if qw==None:
+		qw = _calc_autocorr_time(X)
+
+	E, Es = afn(X, dim=m, tau=tau, maxnum=None, window=int(qw), parallel=parallel)
+
+	E1 = E[1:]/E[:-1]
+	E2 = Es[1:]/Es[:-1]
+	
+	if np.sum(E2<E2_thresh)>0:
+		indE1 = np.argmax(E1>=E1_thresh)
+		mhat = int(m[indE1])
+	else:
+		mhat = np.nan
+
+	return mhat, E1, E2
+
+# CALC AUTOCORRELATION TIME
+def _calc_autocorr_time(X):
+	
+	Nt = len(X)
+	
+	Nbatches  = int(np.ceil(Nt**(1/3)))
+	sizebatch = int(np.ceil(Nt**(2/3)))
+	ind_tbatch_start = np.ceil((Nt-sizebatch)*np.random.rand(Nbatches))
+	
+	var_x = np.var(X)
+	xbatches = np.zeros((Nbatches,sizebatch));
+	for bb in np.arange(Nbatches):
+		xbatches[bb,:] = X[int(ind_tbatch_start[bb]):int(ind_tbatch_start[bb]+sizebatch)];
+	mu_xbatches = np.mean(xbatches,axis=1);
+	var_muxbatches = np.var(mu_xbatches);
+	autocorr_time = sizebatch*var_muxbatches/var_x;
+	return autocorr_time
