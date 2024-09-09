@@ -52,7 +52,7 @@ def tau_vs_time(data, results, params, save=False):
     if save:
         fig.savefig(params["results_dir"] + "/tau_v_time.png")
 
-def summary_calc_m_tau(data, params, E1s, E2s, eps_over_L, best_m, best_tau, save=False):
+def summary_calc_m_tau(data, tau_to_try, E1_thresh, E1s, E2s, eps_over_L, best_m, best_tau, save=False):
     fig,axs=plt.subplots(2, 2)
     fig.set_size_inches((11,9))
 
@@ -63,15 +63,15 @@ def summary_calc_m_tau(data, params, E1s, E2s, eps_over_L, best_m, best_tau, sav
 
     for i, E1 in enumerate(E1s):
         color = "C" + str(i)
-        axs[0,1].plot(E1, color=color, label=("Tau = " + str(params["tau_to_try"][i])))
+        axs[0,1].plot(E1, color=color, label=("Tau = " + str(tau_to_try[i])))
         axs[0,1].plot(E2s[i], color=color)
     axs[0,1].set_title("E1 & E2")
     axs[0,1].set_xlabel("Embedding dimension m")
     axs[0,1].set_ylabel("E value")
-    axs[0,1].axhline(y=params["E1_threshold"], color="lightgrey", label="E1 threshold")
+    axs[0,1].axhline(y=E1_thresh, color="lightgrey", label="E1 threshold")
     axs[0,1].legend()
 
-    axs[1,0].scatter(params["tau_to_try"], eps_over_L)
+    axs[1,0].scatter(tau_to_try, eps_over_L)
     axs[1,0].set_title("Eps over L")
     axs[1,0].set_xlabel("Tau delay")
     axs[1,0].set_ylabel("Eps over L")
@@ -84,6 +84,6 @@ def summary_calc_m_tau(data, params, E1s, E2s, eps_over_L, best_m, best_tau, sav
         axs[1,1].set_title("First embedding")
 
     fig.suptitle("Window: m=" + str(best_m) + ", tau=" + str(best_tau))
-    if save:
-        filename = "/snapshot_window_" + str(params["current_loop"]) + ".png" if "current_loop" in params else "/summary_calc_m_tau.png"
-        fig.savefig(params["results_dir"] + filename)
+    # if save:
+    #     filename = "/snapshot_window_" + str(params["current_loop"]) + ".png" if "current_loop" in params else "/summary_calc_m_tau.png"
+    #     fig.savefig(params["results_dir"] + filename)

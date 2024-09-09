@@ -9,7 +9,8 @@ from utils.data_utils import calculate_best_m_tau, calculate_lyapunov_exponents
 
 
 # LOAD RUN OPTIONS
-run_code = "07"
+run_code = "06"
+print("Run code:", run_code)
 opts_picklepath = os.getcwd() +"/results/" + run_code + "/opts.pickle"
 with open(opts_picklepath, "rb") as f:
     opts = pickle.load(f)
@@ -23,7 +24,7 @@ with open(picklepath, "rb") as f:
 
 # PREPARE output.csv
 outputpath = results_dir + "/output.pickle"
-output = pd.DataFrame(columns=["t_start", "t_end", "m", "tau", "eps_over_L", "E1s", "E2s", "LEs", "KYD"])
+output = pd.DataFrame(columns=["win_start", "win_end", "t_start", "t_end", "m", "tau", "eps_over_L", "E1s", "E2s", "LEs", "KYD"])
 
 
 # THE LOOP
@@ -45,7 +46,7 @@ for i, win in enumerate(windows):
         LEs, KYD = [], np.nan
 
     # PICKLE TO OUTPUT
-    output.loc[i] = [win[0], win[1], m, tau, eps_over_L, E1s, E2s, LEs, KYD]
+    output.loc[i] = [win[0], win[1], data.iloc[0]["TIME"], data.iloc[-1]["TIME"], m, tau, eps_over_L, E1s, E2s, LEs, KYD]
     with open(outputpath, 'wb') as f:
         pickle.dump(output, f)
     

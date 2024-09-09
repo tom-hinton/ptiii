@@ -4,7 +4,6 @@ from scipy.signal.windows import blackman
 from utils.dynsys_utils import \
 	calc_dtheta_EVT, \
 	embed, calc_lyap_spectrum, \
-	calc_dim_Cao1997, \
 	_calc_tangent_map
 import matplotlib.pyplot as plt
 from nolitsa.dimension import afn
@@ -69,7 +68,6 @@ def calculate_best_m_tau(data, **opts):
     
     if np.isnan(eps_over_L).all():
         return [np.nan, np.nan]
-    
     best_m = int(m[np.nanargmin(eps_over_L)])
     best_tau = int(tau_to_try[np.nanargmin(eps_over_L)])
 
@@ -99,40 +97,38 @@ def calculate_lyapunov_exponents(data, m, tau, **args):
     return [LEs, kyd]
 
 # CALCULATE EMBEDDING DIMENSION BY CAO 1997
-def calc_dim_Cao1997(X, tau=1, m=np.arange(1,21,1), \
-						E1_thresh=0.95, E2_thresh=0.95, mw=2, qw=None, \
-						window=10, flag_single_tau=False, parallel=True, **args):
+def calc_dim_Cao1997(X, tau=1, m=np.arange(1,21,1), E1_thresh=0.95, E2_thresh=0.95, mw=2, qw=None, window=10, flag_single_tau=False, parallel=True, **args):
+    
+    if qw==None:
+        qw = _calc_autocorr_time(X)
 
-	if qw==None:
-		qw = _calc_autocorr_time(X)
+    E, Es = afn(X, dim=m, tau=tau, maxnum=None, window=int(qw), parallel=parallel)
 
-	E, Es = afn(X, dim=m, tau=tau, maxnum=None, window=int(qw), parallel=parallel)
+    E1 = E[1:]/E[:-1]
+    E2 = Es[1:]/Es[:-1]
+    
+    if np.sum(E2<E2_thresh)>0:
+        indE1 = np.argmax(E1>=E1_thresh)
+        mhat = int(m[indE1])
+    else:
+        mhat = np.nan
 
-	E1 = E[1:]/E[:-1]
-	E2 = Es[1:]/Es[:-1]
-	
-	if np.sum(E2<E2_thresh)>0:
-		indE1 = np.argmax(E1>=E1_thresh)
-		mhat = int(m[indE1])
-	else:
-		mhat = np.nan
-
-	return mhat, E1, E2
+    return mhat, E1, E2
 
 # CALC AUTOCORRELATION TIME
 def _calc_autocorr_time(X):
 	
-	Nt = len(X)
-	
-	Nbatches  = int(np.ceil(Nt**(1/3)))
-	sizebatch = int(np.ceil(Nt**(2/3)))
-	ind_tbatch_start = np.ceil((Nt-sizebatch)*np.random.rand(Nbatches))
-	
-	var_x = np.var(X)
-	xbatches = np.zeros((Nbatches,sizebatch));
-	for bb in np.arange(Nbatches):
-		xbatches[bb,:] = X[int(ind_tbatch_start[bb]):int(ind_tbatch_start[bb]+sizebatch)];
-	mu_xbatches = np.mean(xbatches,axis=1);
-	var_muxbatches = np.var(mu_xbatches);
-	autocorr_time = sizebatch*var_muxbatches/var_x;
-	return autocorr_time
+    Nt = len(X)
+
+    Nbatches  = int(np.ceil(Nt**(1/3)))
+    sizebatch = int(np.ceil(Nt**(2/3)))
+    ind_tbatch_start = np.ceil((Nt-sizebatch)*np.random.rand(Nbatches))
+
+    var_x = np.var(X)
+    xbatches = np.zeros((Nbatches,sizebatch));
+    for bb in np.arange(Nbatches):
+        xbatches[bb,:] = X[int(ind_tbatch_start[bb]):int(ind_tbatch_start[bb]+sizebatch)];
+    mu_xbatches = np.mean(xbatches,axis=1);
+    var_muxbatches = np.var(mu_xbatches);
+    autocorr_time = sizebatch*var_muxbatches/var_x;
+    return autocorr_time
