@@ -78,12 +78,27 @@ def get_exp_meta(exp_code):
         case "b1383":
             return {
                 "t_start": 1940, "t_end": 5922, "sampling_freq": 1000,
-                "ROIs": [ (3790.5, 4614.3), (4614.3, 4853.6), (4853.6, 5677.6), (5677.6, 5922) ]
+                "ROIs": [ (3790.5, 4614.3, "LPV=3µm/s"), (4614.3, 4853.6, "LPV=10µm/s"), (4853.6, 5677.6, "LPV=3µm/s"), (5677.6, 5922, "LPV=10µm/s") ]
             }
         case "b1385":
-            return { "t_start": 2320, "t_end": 12232, "sampling_freq": 1000 }
+            return {
+                "t_start": 2320, "t_end": 19710, "sampling_freq": 1000,
+                "ROIs": [ (9758, 12247, "PID=13"), (12247, 14735, "PID=8"), (14735, 17219, "PID=4"), (17219, 19710, "PID=2") ]
+            }
         case "b1378":
             return { "t_start": 2466, "t_end": 19570, "sampling_freq": 1000 }
+        case "b1380":
+            return {
+                "t_start": 2492, "t_end": 23895, "sampling_freq": 1000,
+                "ROIs": [ (2492., 10710.5, "LPV=0.3µm/s"), (10710.5, 13182., "LPV=1.0µm/s"), (13182., 21432., "LPV=0.3µm/s"), (21432., 23895., "LPV=1.0µm/s") ]
+            }
+        case "b1384":
+            return {
+                "t_start": 3462.6, "t_end": 4954, "sampling_freq": 1000,
+                "ROIs": [ (3461.6, 3710.8, "PID=20"), (3710.8, 3959.6, "PID=16"), (3959.6, 4208.3, "PID=12"), (4208.3, 4457.9, "PID=8"), (4457.9, 4706.35, "PID=4"), (4706.35, 4954, "PID=2") ]
+            }
+        case "b1382":
+            return { "t_start": 1895, "t_end": 4346, "sampling_freq": 1000 }
         case _:
             return { "sampling_freq": 1000 }
         

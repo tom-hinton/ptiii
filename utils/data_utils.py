@@ -67,7 +67,7 @@ def calculate_best_m_tau(data, **opts):
             print("Result: E2 ~ const., time series is stochastic. Calculation time = ", tic-time.time(), "s")
     
     if np.isnan(eps_over_L).all():
-        return [np.nan, np.nan]
+        return [np.nan, np.nan, eps_over_L, E1s, E2s]
     best_m = int(m[np.nanargmin(eps_over_L)])
     best_tau = int(tau_to_try[np.nanargmin(eps_over_L)])
 
