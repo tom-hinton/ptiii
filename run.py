@@ -9,7 +9,7 @@ from utils.data_utils import calculate_best_m_tau, calculate_lyapunov_exponents
 
 
 # LOAD RUN OPTIONS
-run_code = "10"
+run_code = "12"
 print("Run code:", run_code)
 opts_picklepath = os.getcwd() +"/results/" + run_code + "/opts.pickle"
 with open(opts_picklepath, "rb") as f:

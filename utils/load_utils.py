@@ -82,7 +82,8 @@ def get_exp_meta(exp_code):
             }
         case "b1385":
             return {
-                "t_start": 2320, "t_end": 19710, "sampling_freq": 1000,
+                "t_start": 2320, "t_end": 12247, # 19710
+                "sampling_freq": 1000,
                 "ROIs": [ (9758, 12247, "PID=13"), (12247, 14735, "PID=8"), (14735, 17219, "PID=4"), (17219, 19710, "PID=2") ]
             }
         case "b1378":
