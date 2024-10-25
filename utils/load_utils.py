@@ -67,27 +67,7 @@ def import_brava_data(datapath, picklepath, downsample_factor=None, t_start=None
     data["LVDT NO JUMPS"] = data.loc[:,"ON BOARD LVDT"]
     freq = int(1/(data["TIME"][2] - data["TIME"][1]))
     jumps = []
-    if LVDT_method == "sta/lta":
-        print("...finding LVDT peaks...")
-        rolling_window_length = 5*freq
-        rolling_mean = convolve(data["LVDT NO JUMPS"], np.ones(rolling_window_length)/rolling_window_length, "same")
-        lvdt_detrended = data["LVDT NO JUMPS"] - rolling_mean
-        peaks, _ = find_peaks(lvdt_detrended, height=30, distance=4*freq)
-        jumps = [(int(p-2*freq), int(p+freq)) for p in peaks]
-    elif LVDT_method == "clusters":
-        print("...finding LVDT peaks...")
-        peaks, _ = find_peaks(data["LVDT NO JUMPS"], width=(0.019*freq, 0.25*freq), prominence=1)
-        troughs, _ = find_peaks(-data["LVDT NO JUMPS"], width=(0.019*freq, 0.25*freq), prominence=1)
-        peaks = np.sort(np.concatenate((peaks, troughs)))
-        i = 0
-        while i < (len(peaks) - 1):
-            peak = peaks[i]
-            if (peaks[i+1] - peak) < freq:
-                cluster = [p for p in peaks if peak <= p <= (peak+2*freq) ]
-                jumps.append((int(cluster[0]-freq), int(cluster[-1]+0.5*freq)))
-                i = i + len(cluster)
-            i += 1
-    elif LVDT_method == "negativevelocity":
+    if LVDT_method == "negativevelocity":
         dt = data["TIME"][2] - data["TIME"][1]
         d_dt = FinDiff(0, dt)
         vel = d_dt(data["LVDT NO JUMPS"])
@@ -172,6 +152,13 @@ def normalise_shear(data):
     p = np.polyfit(data["TIME"], data["SHEAR STRESS"], deg=1)
     X = data["SHEAR STRESS"] - (p[0]*data["TIME"] + p[1])
     data["NORMALISED SHEAR"]  = (X - np.min(X)) / (np.max(X) - np.min(X))
+    return data
+
+def normalise_columns(data, columns):
+    for column in columns:
+        p = np.polyfit(data["TIME"], data[column], deg=1)
+        X = data[column] - (p[0]*data["TIME"] + p[1])
+        data[column]  = (X - np.min(X)) / (np.max(X) - np.min(X))
     return data
 
 class JsonEncoder(json.JSONEncoder):
